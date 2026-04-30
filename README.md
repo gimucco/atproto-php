@@ -4,7 +4,7 @@
 
 [![Latest Version](https://img.shields.io/packagist/v/gimucco/atproto-php.svg)](https://packagist.org/packages/gimucco/atproto-php)
 [![PHP Version](https://img.shields.io/packagist/php-v/gimucco/atproto-php.svg)](https://packagist.org/packages/gimucco/atproto-php)
-[![License](https://img.shields.io/packagist/l/gimucco/atproto-php.svg)](https://github.com/gimucco/atproto-php/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/gimucco/atproto-php.svg)](https://github.com/gimucco/atproto-php/blob/main/LICENSE)
 [![CI](https://github.com/gimucco/atproto-php/actions/workflows/ci.yml/badge.svg)](https://github.com/gimucco/atproto-php/actions/workflows/ci.yml)
 
 ---
