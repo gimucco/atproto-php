@@ -241,6 +241,30 @@ Every request automatically:
 - Handles the `use_dpop_nonce` retry if the server requires a nonce
 - Refreshes the access token if it's near expiry
 
+### Raw / binary uploads
+
+For endpoints that accept binary input — e.g. `com.atproto.repo.uploadBlob` for images and videos — use `authenticatedRawRequest()`. The body is sent verbatim with a caller-controlled `Content-Type`:
+
+```php
+// Upload an image as a blob (returns a blob ref you can embed in a post)
+$bytes = file_get_contents('/path/to/photo.jpg');
+
+$response = $session->authenticatedRawRequest(
+    method: 'POST',
+    url: $session->pdsUrl.'/xrpc/com.atproto.repo.uploadBlob',
+    body: $bytes,
+    contentType: 'image/jpeg',
+);
+
+$blob = json_decode((string) $response->getBody(), true)['blob'];
+// $blob is now { "$type": "blob", "ref": {...}, "mimeType": "image/jpeg", "size": ... }
+// — embed it in an app.bsky.feed.post record's `embed.images[].image` field
+```
+
+Same guarantees as `authenticatedRequest()`: DPoP proof, nonce retry, auto-refresh. The body is passed through unchanged — no JSON encoding, no transformation. If you need to override `Content-Type` after the fact (rare), an entry in `$headers` wins (case-insensitive).
+
+`authenticatedRequest()` (array body, JSON-encoded) and `authenticatedRawRequest()` (string body, caller-typed) are the two primitives. Use the former for typed XRPC procedures, the latter for binary uploads.
+
 ## Session storage
 
 ### InMemory (testing)
