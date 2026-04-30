@@ -1,0 +1,162 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ * Generates static client-metadata.json and jwks.json files from a config.php file.
+ *
+ * Usage:
+ *   bin/generate-metadata [--config=<path>] [--output=<dir>]
+ *
+ * Options:
+ *   --config   Path to a PHP file returning a config array (default: ./config.php).
+ *   --output   Output directory for the generated JSON files (default: ./public).
+ *   --help     Show this help message.
+ *
+ * The config file must return an associative array with these keys:
+ *   client_id, redirect_uri, scope, client_name, private_key_path
+ *
+ * Optional keys: client_uri, logo_uri, tos_uri, policy_uri, jwks_uri.
+ *
+ * The script writes:
+ *   <output>/client-metadata.json
+ *   <output>/jwks.json
+ */
+
+declare(strict_types=1);
+
+use Gimucco\Atproto\ClientConfig;
+use Gimucco\Atproto\ClientMetadataBuilder;
+
+$autoloadCandidates = [
+	__DIR__.'/../vendor/autoload.php',     // running from this package's checkout
+	__DIR__.'/../../../autoload.php',      // installed as a Composer dependency (vendor/bin/...)
+];
+
+foreach ($autoloadCandidates as $candidate) {
+	if (\file_exists($candidate)) {
+		require $candidate;
+		break;
+	}
+}
+
+if (!\class_exists(ClientMetadataBuilder::class)) {
+	\fwrite(\STDERR, "Could not locate Composer autoloader. Run `composer install` first.\n");
+	exit(1);
+}
+
+$opts = \getopt('', ['config::', 'output::', 'help']);
+
+if (isset($opts['help'])) {
+	\fwrite(\STDOUT, getHelp());
+	exit(0);
+}
+
+$configPath = $opts['config'] ?? \getcwd().'/config.php';
+$outputDir = $opts['output'] ?? \getcwd().'/public';
+
+if (!\is_string($configPath) || !\is_string($outputDir)) {
+	\fwrite(\STDERR, "Invalid --config or --output value.\n");
+	exit(1);
+}
+
+if (!\file_exists($configPath)) {
+	\fwrite(\STDERR, "Config file not found: {$configPath}\n");
+	exit(1);
+}
+
+/** @var mixed $config */
+$config = require $configPath;
+
+if (!\is_array($config)) {
+	\fwrite(\STDERR, "Config file must return an associative array.\n");
+	exit(1);
+}
+
+$required = ['client_id', 'redirect_uri', 'scope', 'client_name', 'private_key_path'];
+foreach ($required as $key) {
+	if (empty($config[$key])) {
+		\fwrite(\STDERR, "Missing required config key: {$key}\n");
+		exit(1);
+	}
+}
+
+$keyPath = (string) $config['private_key_path'];
+if (!\file_exists($keyPath)) {
+	\fwrite(\STDERR, "Private key file not found: {$keyPath}\n");
+	exit(1);
+}
+
+$privateKey = \file_get_contents($keyPath);
+if ($privateKey === false) {
+	\fwrite(\STDERR, "Could not read private key: {$keyPath}\n");
+	exit(1);
+}
+
+try {
+	$clientConfig = new ClientConfig(
+		clientId: (string) $config['client_id'],
+		redirectUri: (string) $config['redirect_uri'],
+		scope: (string) $config['scope'],
+		clientName: (string) $config['client_name'],
+		clientUri: isset($config['client_uri']) ? (string) $config['client_uri'] : null,
+		logoUri: isset($config['logo_uri']) ? (string) $config['logo_uri'] : null,
+		tosUri: isset($config['tos_uri']) ? (string) $config['tos_uri'] : null,
+		policyUri: isset($config['policy_uri']) ? (string) $config['policy_uri'] : null,
+		jwksUri: isset($config['jwks_uri']) ? (string) $config['jwks_uri'] : null,
+		privateKey: $privateKey,
+	);
+} catch (\Throwable $e) {
+	\fwrite(\STDERR, 'Invalid configuration: '.$e->getMessage()."\n");
+	exit(1);
+}
+
+if (!\is_dir($outputDir) && !\mkdir($outputDir, 0o755, true)) {
+	\fwrite(\STDERR, "Failed to create output directory: {$outputDir}\n");
+	exit(1);
+}
+
+$metadata = ClientMetadataBuilder::fromConfig($clientConfig);
+$jwks = ClientMetadataBuilder::jwksFromConfig($clientConfig);
+
+$jsonFlags = \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR;
+
+$metadataPath = \rtrim($outputDir, '/').'/client-metadata.json';
+$jwksPath = \rtrim($outputDir, '/').'/jwks.json';
+
+if (\file_put_contents($metadataPath, \json_encode($metadata, $jsonFlags)."\n") === false) {
+	\fwrite(\STDERR, "Failed to write {$metadataPath}\n");
+	exit(1);
+}
+
+if (\file_put_contents($jwksPath, \json_encode($jwks, $jsonFlags)."\n") === false) {
+	\fwrite(\STDERR, "Failed to write {$jwksPath}\n");
+	exit(1);
+}
+
+\fwrite(\STDOUT, "Wrote: {$metadataPath}\n");
+\fwrite(\STDOUT, "Wrote: {$jwksPath}\n");
+exit(0);
+
+function getHelp(): string
+{
+	return <<<HELP
+		Generate static client-metadata.json and jwks.json from a config.php file.
+
+		Usage:
+		  generate-metadata [--config=<path>] [--output=<dir>]
+
+		Options:
+		  --config   Path to a PHP file returning a config array (default: ./config.php)
+		  --output   Output directory for the JSON files (default: ./public)
+		  --help     Show this help message
+
+		The config file must return an associative array with these keys:
+		  client_id, redirect_uri, scope, client_name, private_key_path
+
+		Optional keys: client_uri, logo_uri, tos_uri, policy_uri, jwks_uri.
+
+		Example:
+		  bin/generate-metadata --config=examples/config.php --output=examples/public
+
+		HELP;
+}

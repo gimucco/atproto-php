@@ -1,0 +1,40 @@
+# Composer
+/vendor/
+composer.lock
+
+# Tooling caches
+/coverage/
+/.php-cs-fixer.cache
+/phpstan-baseline.neon
+.phpunit.result.cache
+.phpunit.cache/
+
+# Secrets / private keys (never commit)
+*.pem
+*.key
+*.p12
+*.pfx
+.env
+.env.*
+!.env.example
+
+# Example user config and generated metadata (user-specific, not for distribution)
+examples/config.php
+examples/private.pem
+examples/storage/
+examples/public/client-metadata.json
+examples/public/jwks.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local agent metadata
+.claude
