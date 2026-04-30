@@ -20,6 +20,11 @@ final class ClientConfig
 	 * @param string|null $jwksUri URL where the JWKS is hosted
 	 * @param string|array<string, mixed> $privateKey ES256 private key in PEM format, or a JWK array
 	 * @param string|null $encryptionPassphrase Passphrase for encrypting tokens at rest
+	 * @param string $defaultAuthorizationServer Authorization server URL used by
+	 *        `OAuthClient::beginAuthorization()` when called without a handle/DID
+	 *        and without an explicit server. Defaults to `https://bsky.social`.
+	 *        Override to point your "Sign in" button at a different atproto host
+	 *        (e.g., a self-hosted PDS).
 	 *
 	 * @throws ConfigurationException If the configuration is invalid
 	 */
@@ -35,6 +40,7 @@ final class ClientConfig
 		public readonly ?string $jwksUri = null,
 		public readonly string|array $privateKey = '',
 		public readonly ?string $encryptionPassphrase = null,
+		public readonly string $defaultAuthorizationServer = 'https://bsky.social',
 	) {
 		$this->validate();
 	}
@@ -62,6 +68,10 @@ final class ClientConfig
 
 		if ($this->privateKey === '' || $this->privateKey === []) {
 			throw new ConfigurationException('privateKey is required for confidential clients');
+		}
+
+		if (!str_starts_with($this->defaultAuthorizationServer, 'https://')) {
+			throw new ConfigurationException('defaultAuthorizationServer must be an HTTPS URL');
 		}
 	}
 }

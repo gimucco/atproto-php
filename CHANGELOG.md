@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-04-30
+
+### Added
+
+- `ClientConfig::$defaultAuthorizationServer` — configurable auth server URL for the server-first authorization flow. Defaults to `https://bsky.social`; override to point a "Sign in" button at a self-hosted PDS or another atproto host without changing per-call code.
+
+### Changed
+
+- `OAuthClient::beginAuthorization()` now reads its server-first fallback from `ClientConfig::$defaultAuthorizationServer` instead of a hardcoded `https://bsky.social`. The default URL is unchanged, so existing callers see no behaviour change.
+
+### Fixed
+
+- `AuthServerResolver` now normalises issuer URLs before constructing the `.well-known/oauth-authorization-server` discovery URL. Previously, an issuer URL containing a query string or fragment (e.g. `https://example.com?x=y`) would produce a malformed fetch URL. Trailing slashes are still stripped; ports and paths are preserved (per RFC 8414); query strings, fragments, and non-`http(s)` schemes are now explicitly rejected with a clear `ResolutionException`.
+
+### Documentation
+
+- README "Step 1" reorganised to clearly distinguish identity-first vs server-first flows and show how to target a non-Bluesky auth server.
+
 ## [0.1.0] - 2026-04-30
 
 ### Added

@@ -150,19 +150,45 @@ If you'd rather generate them in your own application code (e.g., during a deplo
 
 ## The full OAuth flow
 
-### Step 1: Resolve and start authorization
+### Step 1: Start authorization
+
+The library supports two flows:
+
+**Identity-first** — the user enters their handle, you pre-fill the auth server's identifier field:
 
 ```php
-// The user provides their handle (or DID)
-$handle = 'alice.bsky.social';
-
-// This resolves the handle → DID → PDS → auth server, generates PKCE + DPoP,
-// sends a PAR request, and returns the authorization URL
-$authUrl = $oauth->beginAuthorization($handle);
-
+$authUrl = $oauth->beginAuthorization('alice.bsky.social');
 // Redirect the user's browser
 header('Location: '.$authUrl);
 exit;
+```
+
+The library resolves the handle → DID → PDS → auth server, then sends the PAR with `login_hint` set so the auth server pre-fills the identifier on its sign-in page.
+
+**Server-first** — the user picks their account on the auth server's own page:
+
+```php
+$authUrl = $oauth->beginAuthorization();   // no handle
+header('Location: '.$authUrl);
+exit;
+```
+
+This skips identity resolution entirely and redirects to the auth server configured by `ClientConfig::$defaultAuthorizationServer` (default: `https://bsky.social`). The user's actual identity is determined post-auth from the `sub` claim in the token response, then resolved.
+
+To target a specific atproto host (e.g., a self-hosted PDS) without entering a handle, override per-call or in config:
+
+```php
+// Per-call override
+$authUrl = $oauth->beginAuthorization(
+    handleOrDid: null,
+    authorizationServer: 'https://auth.example.com',
+);
+
+// Or set the project-wide default once in ClientConfig:
+$config = new ClientConfig(
+    // ...
+    defaultAuthorizationServer: 'https://auth.example.com',
+);
 ```
 
 ### Step 2: Handle the callback

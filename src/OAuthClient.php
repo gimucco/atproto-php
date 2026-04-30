@@ -93,17 +93,21 @@ final class OAuthClient
 	 *     the DID as a `login_hint` so the auth server pre-fills the identifier
 	 *     field on its sign-in page.
 	 *  2. Server-first (pass `$handleOrDid = null`): the library skips identity
-	 *     resolution and redirects straight to the supplied authorization server
-	 *     (default: https://bsky.social). The user enters their identifier on
-	 *     the auth server's own page. The actual DID is determined post-auth
-	 *     from the `sub` claim and resolved at that point.
+	 *     resolution and redirects straight to an authorization server.
+	 *     The user enters their identifier on the auth server's own page.
+	 *     The actual DID is determined post-auth from the `sub` claim and
+	 *     resolved at that point. The auth server URL is taken from (in order):
+	 *     this method's `$authorizationServer` argument, then
+	 *     `ClientConfig::$defaultAuthorizationServer`, which itself defaults
+	 *     to `https://bsky.social`.
 	 *
 	 * @param string|null $handleOrDid The user's handle/DID, or null to defer
 	 *                                 identity selection to the auth server.
 	 * @param string|null $state Optional custom state value (one will be generated if null)
-	 * @param string|null $authorizationServer Authorization server URL to use
-	 *                                         when no handle/DID is given.
-	 *                                         Default: https://bsky.social.
+	 * @param string|null $authorizationServer Override the auth server URL for
+	 *                                         this call only (server-first mode).
+	 *                                         Falls back to ClientConfig's
+	 *                                         `defaultAuthorizationServer`.
 	 *
 	 * @return string The authorization URL to redirect the user to
 	 *
@@ -128,7 +132,7 @@ final class OAuthClient
 			$authServer = $this->authServerResolver->resolve($pdsUrl);
 		} else {
 			$authServer = $this->authServerResolver->resolveDirect(
-				$authorizationServer ?? 'https://bsky.social',
+				$authorizationServer ?? $this->config->defaultAuthorizationServer,
 			);
 		}
 

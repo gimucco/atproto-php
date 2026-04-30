@@ -87,4 +87,46 @@ final class ClientConfigTest extends TestCase
 			privateKey: '',
 		);
 	}
+
+	public function testDefaultAuthorizationServerDefaultsToBskySocial(): void
+	{
+		$config = new ClientConfig(
+			clientId: 'https://example.com/client-metadata.json',
+			redirectUri: 'https://example.com/callback',
+			scope: 'atproto',
+			clientName: 'Test App',
+			privateKey: self::$pem,
+		);
+
+		self::assertSame('https://bsky.social', $config->defaultAuthorizationServer);
+	}
+
+	public function testCustomDefaultAuthorizationServerIsRespected(): void
+	{
+		$config = new ClientConfig(
+			clientId: 'https://example.com/client-metadata.json',
+			redirectUri: 'https://example.com/callback',
+			scope: 'atproto',
+			clientName: 'Test App',
+			privateKey: self::$pem,
+			defaultAuthorizationServer: 'https://my-pds.example.com',
+		);
+
+		self::assertSame('https://my-pds.example.com', $config->defaultAuthorizationServer);
+	}
+
+	public function testNonHttpsDefaultAuthorizationServerThrows(): void
+	{
+		$this->expectException(ConfigurationException::class);
+		$this->expectExceptionMessage('defaultAuthorizationServer must be an HTTPS URL');
+
+		new ClientConfig(
+			clientId: 'https://example.com/client-metadata.json',
+			redirectUri: 'https://example.com/callback',
+			scope: 'atproto',
+			clientName: 'Test App',
+			privateKey: self::$pem,
+			defaultAuthorizationServer: 'http://insecure.example.com',
+		);
+	}
 }

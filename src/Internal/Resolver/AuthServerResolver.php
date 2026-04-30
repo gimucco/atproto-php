@@ -35,7 +35,7 @@ final class AuthServerResolver
 	{
 		$pdsUrl = rtrim($pdsUrl, '/');
 
-		$issuer = $this->fetchProtectedResourceIssuer($pdsUrl);
+		$issuer = self::normalizeIssuerUrl($this->fetchProtectedResourceIssuer($pdsUrl));
 		$meta = $this->fetchAuthServerMetadata($issuer);
 
 		$meta['issuer_url'] = $issuer;
@@ -58,12 +58,38 @@ final class AuthServerResolver
 	 */
 	public function resolveDirect(string $issuerUrl): array
 	{
-		$issuerUrl = rtrim($issuerUrl, '/');
+		$issuerUrl = self::normalizeIssuerUrl($issuerUrl);
 
 		$meta = $this->fetchAuthServerMetadata($issuerUrl);
 		$meta['issuer_url'] = $issuerUrl;
 
 		return $meta;
+	}
+
+	/**
+	 * Normalize an issuer URL into the canonical form used for `.well-known`
+	 * discovery: scheme + host + (optional port) + (optional path, no trailing slash).
+	 * Strips query string and fragment, which are meaningless for an issuer
+	 * and would otherwise produce a malformed `.well-known` URL when concatenated.
+	 *
+	 * @throws ResolutionException If the URL is invalid or uses an unsupported scheme
+	 */
+	private static function normalizeIssuerUrl(string $url): string
+	{
+		$parsed = parse_url($url);
+		if ($parsed === false || empty($parsed['scheme']) || empty($parsed['host'])) {
+			throw new ResolutionException('Invalid authorization server URL: '.$url);
+		}
+
+		$scheme = $parsed['scheme'];
+		if ($scheme !== 'https' && $scheme !== 'http') {
+			throw new ResolutionException('Authorization server URL must use http or https: '.$url);
+		}
+
+		$port = isset($parsed['port']) ? ':'.$parsed['port'] : '';
+		$path = isset($parsed['path']) ? rtrim($parsed['path'], '/') : '';
+
+		return $scheme.'://'.$parsed['host'].$port.$path;
 	}
 
 	/**
@@ -104,7 +130,8 @@ final class AuthServerResolver
 	 */
 	private function fetchAuthServerMetadata(string $issuer): array
 	{
-		$url = rtrim($issuer, '/').'/.well-known/oauth-authorization-server';
+		// Callers must pre-normalize via normalizeIssuerUrl().
+		$url = $issuer.'/.well-known/oauth-authorization-server';
 
 		try {
 			$request = $this->requestFactory->createRequest('GET', $url);
