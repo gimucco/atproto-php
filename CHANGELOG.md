@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-05-01
+
+### Fixed
+
+- `PdoSessionStore::save()` and `PdoStateStore::save()` previously emitted PostgreSQL/SQLite `INSERT ... ON CONFLICT` syntax against all backends, which fails on MySQL/MariaDB with a syntax error. The store now detects the PDO driver and emits MySQL-native `INSERT ... ON DUPLICATE KEY UPDATE ... = VALUES(...)` for `mysql`, while `pgsql` and `sqlite` continue to use `ON CONFLICT` (now referencing the standard `EXCLUDED` pseudo-table for clarity, eliminating named-parameter reuse).
+
 ## [0.2.0] - 2026-05-01
 
 ### Changed

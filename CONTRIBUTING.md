@@ -4,7 +4,7 @@ Thank you for considering a contribution. This guide covers the development setu
 
 ## Requirements
 
-- PHP 8.1 or newer
+- PHP 8.2 or newer
 - Extensions: `json`, `curl`, `openssl`, `sodium`, `pdo_sqlite` (for PDO storage tests)
 - [Composer](https://getcomposer.org/)
 

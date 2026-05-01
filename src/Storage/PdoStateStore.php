@@ -6,10 +6,12 @@ namespace Gimucco\Atproto\Storage;
 
 use Gimucco\Atproto\Exception\SessionException;
 use Gimucco\Atproto\StateStoreInterface;
+use Gimucco\Atproto\Storage\Pdo\UpsertSqlBuilder;
 
 final class PdoStateStore implements StateStoreInterface
 {
 	private readonly ?EncryptionHelper $encryption;
+	private readonly string $driver;
 
 	/**
 	 * @param \PDO $pdo Database connection
@@ -24,6 +26,7 @@ final class PdoStateStore implements StateStoreInterface
 		$this->encryption = ($passphrase !== null && $passphrase !== '')
 			? new EncryptionHelper($passphrase)
 			: null;
+		$this->driver = (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
 	}
 
 	/**
@@ -37,13 +40,13 @@ final class PdoStateStore implements StateStoreInterface
 			$payload = $this->encryption->encrypt($payload);
 		}
 
-		$sql = <<<SQL
-            INSERT INTO {$this->tableName} (state_key, payload, expires_at)
-            VALUES (:state_key, :payload, :expires_at)
-            ON CONFLICT (state_key) DO UPDATE SET
-                payload = :payload,
-                expires_at = :expires_at
-            SQL;
+		$sql = UpsertSqlBuilder::build(
+			driver: $this->driver,
+			table: $this->tableName,
+			insertColumns: ['state_key', 'payload', 'expires_at'],
+			conflictColumn: 'state_key',
+			updateColumns: ['payload', 'expires_at'],
+		);
 
 		try {
 			$stmt = $this->pdo->prepare($sql);

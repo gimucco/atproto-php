@@ -6,6 +6,7 @@ namespace Gimucco\Atproto\Storage;
 
 use Gimucco\Atproto\Exception\SessionException;
 use Gimucco\Atproto\SessionStoreInterface;
+use Gimucco\Atproto\Storage\Pdo\UpsertSqlBuilder;
 use Gimucco\Atproto\StoredSession;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -13,6 +14,7 @@ use Psr\Log\NullLogger;
 final class PdoSessionStore implements SessionStoreInterface
 {
 	private readonly ?EncryptionHelper $encryption;
+	private readonly string $driver;
 
 	/**
 	 * @param \PDO $pdo Database connection
@@ -32,6 +34,7 @@ final class PdoSessionStore implements SessionStoreInterface
 			$this->encryption = null;
 			$this->logger->warning('PdoSessionStore: no encryption passphrase provided — tokens stored in plaintext');
 		}
+		$this->driver = (string) $pdo->getAttribute(\PDO::ATTR_DRIVER_NAME);
 	}
 
 	public function save(StoredSession $session): void
@@ -48,20 +51,19 @@ final class PdoSessionStore implements SessionStoreInterface
 			$dpopKey = $this->encryption->encrypt($dpopKey);
 		}
 
-		$sql = <<<SQL
-            INSERT INTO {$this->tableName} (did, handle, pds_url, auth_server_issuer, token_endpoint, access_token, refresh_token, dpop_private_key_pem, expires_at, scope)
-            VALUES (:did, :handle, :pds_url, :auth_server_issuer, :token_endpoint, :access_token, :refresh_token, :dpop_private_key_pem, :expires_at, :scope)
-            ON CONFLICT (did) DO UPDATE SET
-                handle = :handle,
-                pds_url = :pds_url,
-                auth_server_issuer = :auth_server_issuer,
-                token_endpoint = :token_endpoint,
-                access_token = :access_token,
-                refresh_token = :refresh_token,
-                dpop_private_key_pem = :dpop_private_key_pem,
-                expires_at = :expires_at,
-                scope = :scope
-            SQL;
+		$sql = UpsertSqlBuilder::build(
+			driver: $this->driver,
+			table: $this->tableName,
+			insertColumns: [
+				'did', 'handle', 'pds_url', 'auth_server_issuer', 'token_endpoint',
+				'access_token', 'refresh_token', 'dpop_private_key_pem', 'expires_at', 'scope',
+			],
+			conflictColumn: 'did',
+			updateColumns: [
+				'handle', 'pds_url', 'auth_server_issuer', 'token_endpoint',
+				'access_token', 'refresh_token', 'dpop_private_key_pem', 'expires_at', 'scope',
+			],
+		);
 
 		try {
 			$stmt = $this->pdo->prepare($sql);

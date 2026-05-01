@@ -4,7 +4,7 @@ A complete working demo of the AT Protocol OAuth 2.1 flow using this library.
 
 ## Prerequisites
 
-- PHP 8.1+ with extensions: `json`, `curl`, `openssl`, `sodium`
+- PHP 8.2+ with extensions: `json`, `curl`, `openssl`, `sodium`
 - [Composer](https://getcomposer.org/) installed
 - A domain with HTTPS (the AT Protocol requires `https://` for client metadata and callbacks)
 
