@@ -13,7 +13,7 @@
 
 This library handles **OAuth 2.1 authentication** with any AT Protocol Personal Data Server (PDS). It gives you an authenticated session you can use to make API calls.
 
-**This is OAuth only.** It does not implement Bluesky-specific operations like posting, fetching feeds, or managing profiles. For that, see the companion library (coming soon).
+**This is OAuth only.** It does not implement Bluesky-specific operations like posting, fetching feeds, or managing profiles. For that, see the companion library [gimucco/bluesky-php](https://github.com/gimucco/bluesky-php).
 
 ## Why use this
 
