@@ -29,7 +29,7 @@ This library handles all of it.
 
 ## Requirements
 
-- PHP 8.1+
+- PHP 8.2+
 - Extensions: `json`, `curl`, `openssl`, `sodium`
 - A PSR-18 HTTP client (Guzzle recommended)
 - An HTTPS domain where you can host two JSON files (client metadata and JWKS)
