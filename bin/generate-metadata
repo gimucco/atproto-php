@@ -15,6 +15,9 @@
  * The config file must return an associative array with these keys:
  *   client_id, redirect_uri, scope, client_name, private_key_path
  *
+ * `redirect_uri` may be either a single string (one URI) or an array of
+ * strings (multiple URIs declared in client-metadata.json).
+ *
  * Optional keys: client_uri, logo_uri, tos_uri, policy_uri, jwks_uri.
  *
  * The script writes:
@@ -92,10 +95,28 @@ if ($privateKey === false) {
 	exit(1);
 }
 
+$redirectUriRaw = $config['redirect_uri'];
+$primaryRedirectUri = '';
+$additionalRedirectUris = [];
+
+if (\is_string($redirectUriRaw)) {
+	$primaryRedirectUri = $redirectUriRaw;
+} elseif (\is_array($redirectUriRaw) && $redirectUriRaw !== []) {
+	$normalized = array_values(array_unique(array_map(
+		static fn(mixed $u): string => (string) $u,
+		$redirectUriRaw,
+	)));
+	$primaryRedirectUri = $normalized[0];
+	$additionalRedirectUris = \array_slice($normalized, 1);
+} else {
+	\fwrite(\STDERR, "redirect_uri must be a string or a non-empty array of strings.\n");
+	exit(1);
+}
+
 try {
 	$clientConfig = new ClientConfig(
 		clientId: (string) $config['client_id'],
-		redirectUri: (string) $config['redirect_uri'],
+		redirectUri: $primaryRedirectUri,
 		scope: (string) $config['scope'],
 		clientName: (string) $config['client_name'],
 		clientUri: isset($config['client_uri']) ? (string) $config['client_uri'] : null,
@@ -104,6 +125,7 @@ try {
 		policyUri: isset($config['policy_uri']) ? (string) $config['policy_uri'] : null,
 		jwksUri: isset($config['jwks_uri']) ? (string) $config['jwks_uri'] : null,
 		privateKey: $privateKey,
+		additionalRedirectUris: $additionalRedirectUris,
 	);
 } catch (\Throwable $e) {
 	\fwrite(\STDERR, 'Invalid configuration: '.$e->getMessage()."\n");
@@ -152,6 +174,9 @@ function getHelp(): string
 
 		The config file must return an associative array with these keys:
 		  client_id, redirect_uri, scope, client_name, private_key_path
+
+		`redirect_uri` may be a single string or an array of strings (multiple
+		URIs declared in client-metadata.json).
 
 		Optional keys: client_uri, logo_uri, tos_uri, policy_uri, jwks_uri.
 

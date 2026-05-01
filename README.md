@@ -148,6 +148,59 @@ bin/generate-metadata --config=examples/config.php --output=examples/public
 
 If you'd rather generate them in your own application code (e.g., during a deploy hook), the underlying API is `ClientMetadataBuilder::fromConfig($config)` and `ClientMetadataBuilder::jwksFromConfig($config)` — both return associative arrays you can `json_encode` and write wherever you like.
 
+### Multiple redirect URIs (one client_id, multiple flows)
+
+A single `client_id` can declare multiple `redirect_uris` — useful when one app needs distinct callback URLs for separate flows (e.g., login vs. account-linking, or web vs. mobile). The CLI accepts an array:
+
+```php
+// config.php for bin/generate-metadata
+return [
+    'client_id' => 'https://your-app.com/client-metadata.json',
+    'redirect_uri' => [
+        'https://your-app.com/callback/login',
+        'https://your-app.com/callback/link',
+    ],
+    // …
+];
+```
+
+At runtime, create one `ClientConfig` per flow — same `clientId`, `privateKey`, and `encryptionPassphrase`, different `redirectUri`. Sessions are keyed by DID and refreshable through any config that shares those three fields, so a session minted by the login flow is fully usable from the link flow:
+
+```php
+$loginConfig = new ClientConfig(
+    clientId: 'https://your-app.com/client-metadata.json',
+    redirectUri: 'https://your-app.com/callback/login',
+    privateKey: $pem,
+    encryptionPassphrase: $passphrase,
+    // …
+);
+
+$linkConfig = new ClientConfig(
+    clientId: 'https://your-app.com/client-metadata.json',
+    redirectUri: 'https://your-app.com/callback/link',
+    privateKey: $pem,                  // same
+    encryptionPassphrase: $passphrase, // same
+    // …
+);
+```
+
+If you generate the metadata document programmatically (not via the CLI), pass the extra URIs through `additionalRedirectUris`:
+
+```php
+$metaConfig = new ClientConfig(
+    clientId: 'https://your-app.com/client-metadata.json',
+    redirectUri: 'https://your-app.com/callback/login',
+    additionalRedirectUris: ['https://your-app.com/callback/link'],
+    // …
+);
+
+file_put_contents('public/client-metadata.json', json_encode(
+    ClientMetadataBuilder::fromConfig($metaConfig)
+));
+```
+
+`additionalRedirectUris` is purely declarative — it only affects the metadata JSON. At runtime, each `ClientConfig` still uses its own `redirectUri` for PAR and token exchange.
+
 ## The full OAuth flow
 
 ### Step 1: Start authorization

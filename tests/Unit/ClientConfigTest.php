@@ -129,4 +129,67 @@ final class ClientConfigTest extends TestCase
 			defaultAuthorizationServer: 'http://insecure.example.com',
 		);
 	}
+
+	public function testAdditionalRedirectUrisDefaultsToEmpty(): void
+	{
+		$config = new ClientConfig(
+			clientId: 'https://example.com/client-metadata.json',
+			redirectUri: 'https://example.com/callback',
+			scope: 'atproto',
+			clientName: 'Test App',
+			privateKey: self::$pem,
+		);
+
+		self::assertSame([], $config->additionalRedirectUris);
+	}
+
+	public function testAdditionalRedirectUrisAcceptsValidEntries(): void
+	{
+		$config = new ClientConfig(
+			clientId: 'https://example.com/client-metadata.json',
+			redirectUri: 'https://example.com/callback/login',
+			scope: 'atproto',
+			clientName: 'Test App',
+			privateKey: self::$pem,
+			additionalRedirectUris: [
+				'https://example.com/callback/link',
+				'http://localhost:8080/callback',
+			],
+		);
+
+		self::assertSame(
+			['https://example.com/callback/link', 'http://localhost:8080/callback'],
+			$config->additionalRedirectUris,
+		);
+	}
+
+	public function testAdditionalRedirectUrisRejectsNonHttpsEntry(): void
+	{
+		$this->expectException(ConfigurationException::class);
+		$this->expectExceptionMessage('additionalRedirectUris');
+
+		new ClientConfig(
+			clientId: 'https://example.com/client-metadata.json',
+			redirectUri: 'https://example.com/callback/login',
+			scope: 'atproto',
+			clientName: 'Test App',
+			privateKey: self::$pem,
+			additionalRedirectUris: ['http://insecure.example.com/callback'],
+		);
+	}
+
+	public function testAdditionalRedirectUrisRejectsDuplicateOfPrimary(): void
+	{
+		$this->expectException(ConfigurationException::class);
+		$this->expectExceptionMessage('must not duplicate the primary redirect_uri');
+
+		new ClientConfig(
+			clientId: 'https://example.com/client-metadata.json',
+			redirectUri: 'https://example.com/callback/login',
+			scope: 'atproto',
+			clientName: 'Test App',
+			privateKey: self::$pem,
+			additionalRedirectUris: ['https://example.com/callback/login'],
+		);
+	}
 }

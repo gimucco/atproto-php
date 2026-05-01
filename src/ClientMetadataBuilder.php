@@ -23,7 +23,7 @@ final class ClientMetadataBuilder
 			'application_type' => 'web',
 			'grant_types' => ['authorization_code', 'refresh_token'],
 			'response_types' => ['code'],
-			'redirect_uris' => [$config->redirectUri],
+			'redirect_uris' => array_values(array_unique([$config->redirectUri, ...$config->additionalRedirectUris])),
 			'scope' => $config->scope,
 			'dpop_bound_access_tokens' => true,
 			'token_endpoint_auth_method' => 'private_key_jwt',

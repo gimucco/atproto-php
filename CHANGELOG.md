@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2026-05-01
+
+### Added
+
+- `ClientConfig::$additionalRedirectUris` — declarative-only field for listing extra redirect URIs in the generated client metadata document. Useful when one `client_id` needs to serve multiple OAuth flows (e.g., login + account-linking). Validated the same way as `redirectUri`; duplicates and non-HTTPS entries are rejected. Default is an empty array, so existing callers see no change.
+- `bin/generate-metadata` now accepts `redirect_uri` as either a string (one URI) or an array of strings (multiple URIs). When an array is supplied, the first entry becomes the primary `redirectUri` and the rest populate `additionalRedirectUris`.
+
+### Changed
+
+- `ClientMetadataBuilder::fromConfig()` now emits the union of `redirectUri` and `additionalRedirectUris` (deduplicated, primary first) into the `redirect_uris` array.
+
+### Documentation
+
+- README: new "Multiple redirect URIs" subsection under "Hosting client metadata and JWKS" showing the CLI form, the runtime two-config pattern, and the programmatic `additionalRedirectUris` API.
+- `examples/config.example.php`: commented example of the multi-URI form.
+
 ## [0.2.1] - 2026-05-01
 
 ### Fixed

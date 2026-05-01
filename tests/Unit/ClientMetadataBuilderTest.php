@@ -53,6 +53,32 @@ final class ClientMetadataBuilderTest extends TestCase
 		self::assertSame('private_key_jwt', $metadata['token_endpoint_auth_method']);
 	}
 
+	public function testRedirectUrisIncludesAdditionalUris(): void
+	{
+		$config = new ClientConfig(
+			clientId: 'https://example.com/client-metadata.json',
+			redirectUri: 'https://example.com/callback/login',
+			scope: 'atproto',
+			clientName: 'Test App',
+			privateKey: self::$config->privateKey,
+			additionalRedirectUris: [
+				'https://example.com/callback/link',
+				'https://example.com/callback/admin',
+			],
+		);
+
+		$metadata = ClientMetadataBuilder::fromConfig($config);
+
+		self::assertSame(
+			[
+				'https://example.com/callback/login',
+				'https://example.com/callback/link',
+				'https://example.com/callback/admin',
+			],
+			$metadata['redirect_uris'],
+		);
+	}
+
 	public function testJwksFromConfigReturnsArrayWithPublicKey(): void
 	{
 		$jwks = ClientMetadataBuilder::jwksFromConfig(self::$config);

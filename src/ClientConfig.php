@@ -25,6 +25,12 @@ final class ClientConfig
 	 *        and without an explicit server. Defaults to `https://bsky.social`.
 	 *        Override to point your "Sign in" button at a different atproto host
 	 *        (e.g., a self-hosted PDS).
+	 * @param list<string> $additionalRedirectUris Extra redirect URIs to declare in the
+	 *        generated client metadata document. Use this when one client_id needs to
+	 *        accept multiple callback URLs (e.g., a login flow and an account-linking
+	 *        flow). Only consumed by `ClientMetadataBuilder`; at runtime this config
+	 *        still uses `$redirectUri` for PAR and token exchange — declare a separate
+	 *        `ClientConfig` instance per flow.
 	 *
 	 * @throws ConfigurationException If the configuration is invalid
 	 */
@@ -41,6 +47,7 @@ final class ClientConfig
 		public readonly string|array $privateKey = '',
 		public readonly ?string $encryptionPassphrase = null,
 		public readonly string $defaultAuthorizationServer = 'https://bsky.social',
+		public readonly array $additionalRedirectUris = [],
 	) {
 		$this->validate();
 	}
@@ -54,8 +61,17 @@ final class ClientConfig
 			throw new ConfigurationException('client_id must be an HTTPS URL');
 		}
 
-		if (!str_starts_with($this->redirectUri, 'https://') && !str_starts_with($this->redirectUri, 'http://localhost') && !str_starts_with($this->redirectUri, 'http://127.0.0.1')) {
+		if (!self::isValidRedirectUri($this->redirectUri)) {
 			throw new ConfigurationException('redirect_uri must be an HTTPS URL (or localhost for development)');
+		}
+
+		foreach ($this->additionalRedirectUris as $uri) {
+			if (!self::isValidRedirectUri($uri)) {
+				throw new ConfigurationException('additionalRedirectUris entries must be HTTPS URLs (or localhost for development)');
+			}
+			if ($uri === $this->redirectUri) {
+				throw new ConfigurationException('additionalRedirectUris must not duplicate the primary redirect_uri');
+			}
 		}
 
 		if (!str_contains($this->scope, 'atproto')) {
@@ -73,5 +89,12 @@ final class ClientConfig
 		if (!str_starts_with($this->defaultAuthorizationServer, 'https://')) {
 			throw new ConfigurationException('defaultAuthorizationServer must be an HTTPS URL');
 		}
+	}
+
+	private static function isValidRedirectUri(string $uri): bool
+	{
+		return str_starts_with($uri, 'https://')
+			|| str_starts_with($uri, 'http://localhost')
+			|| str_starts_with($uri, 'http://127.0.0.1');
 	}
 }
